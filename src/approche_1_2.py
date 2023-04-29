@@ -61,7 +61,6 @@ def stock_data(data_path,path_data_save,mode, approche=True,apprentissage=True):
 
     X=[]
     Y=[]
-    
 
     path_file = file_app if apprentissage else file_test
     path_file= data_path+'/'+ path_file
