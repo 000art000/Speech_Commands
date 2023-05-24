@@ -16,7 +16,6 @@ from functools import reduce
 import pickle
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.metrics import confusion_matrix
-from tqdm import tqdm
 
 
 # defintion des chemin de fichier d"app et de test
@@ -61,6 +60,7 @@ def stock_data(data_path,path_data_save,mode, approche=True,apprentissage=True):
 
     X=[]
     Y=[]
+    
 
     path_file = file_app if apprentissage else file_test
     path_file= data_path+'/'+ path_file
@@ -155,3 +155,83 @@ def learning(grid,rep_save,mod,X,Y,X_test,Y_test,modele,approche='max'):
 		os.mkdir(rep_save+f'/{approche}')
 	with open(rep_save+f'/{approche}/'+mod+f'_{modele}'+ '.pickle', 'wb') as f:
 		pickle.dump(results, f)
+
+
+## Fonction qui s'occupe de l'affichage des résultats
+def affichage(type_approche):
+    #Initialisations 
+    m=[]
+    r=[]
+    score_app=[]
+    score_test=[]
+    conf_matrice=[]
+
+    path = "resultat/"+type_approche
+    files = [f for f in listdir(path) if isfile(f'{path}/{f}') and 'pickle' in f]
+
+    def aux(m,r,l):
+        for ele in l:
+            if m in ele and r  in ele  :
+                return ele
+            
+    for rep in ['mfcc','brute','melspec','harm','perc']:
+        for modele in ['knn','naive_bayes']:
+            m.append(modele)
+            r.append(f'{rep}')
+            
+            f=aux(modele,rep,files)
+            
+            with open (f'{path}/{f}','rb') as fd :
+                obj=pickle.load(fd)
+                score_test.append(obj['test_score'])
+                
+                score_app.append(obj['best_score'])
+                conf_matrice.append(obj['confusion_matrix'])
+                
+    data={'representation':r,'modele':m,'score_app':score_app,'score_test':score_test}
+    print(pd.DataFrame(data))
+
+def show_min_max_avg(data_path,app=True):
+    max = -np.inf 
+    min = np.inf
+    l=[]
+    
+    path_file = file_app if app else file_test
+    path_file= data_path+'/'+ path_file
+    
+    with open(path_file,'r') as fd :
+        for line in (fd) :
+            with open(path_file,'r') as fd :
+                label=line.split('/')[0]
+                signal,_=librosa.load(data_path+'/'+line.rstrip())
+
+                size=signal.shape[0] 
+                max=max if max>size else size
+                min = min if min<size else size
+                l.append(size)
+            
+            
+    return max,min,sum(l)/len(l)
+
+
+
+def show_matrix(modele,representation,typ_data):
+    def aux(m,r,l):
+        for ele in l:
+            if m in ele and r  in ele :
+                return ele
+            
+    path = "resultat/"+typ_data
+    onlyfiles = [f for f in listdir(path) if isfile(f'{path}/{f}') ]
+    f=aux(modele,representation,onlyfiles)
+    with open (f'{path}/{f}','rb') as fd :
+        obj=pickle.load(fd)
+        mat_conf=obj['confusion_matrix']
+        sns.heatmap(mat_conf, annot=True, cmap="Blues", fmt="d", cbar=False)
+        # Configuration des labels des axes
+        plt.xlabel("Classe prédite")
+        plt.ylabel("Classe réelle")
+
+        # Affichage du graphique
+        plt.show()
+     

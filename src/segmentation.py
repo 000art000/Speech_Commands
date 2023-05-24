@@ -5,14 +5,16 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import LabelEncoder
 import os 
-from sklearn.neighbors import KNeighborsClassifier
 import pickle
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
 import pandas as pd
 from os import listdir
 from os.path import isfile
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 # defintion des chemin de fichier d"app et de test
 file_app='validation_list.txt'
@@ -286,21 +288,21 @@ def lanch(path_data,rep_save,mode):
     ###############################################################################################################################
 
     #sans chauvechement
-    #X_train, Y_train,codage_train,label_train=load_data(path_data,mode)
-    #X_test, Y_test,codage_test,label_test=load_data(path_data,mode,apprentissage=False)
+    X_train, Y_train,codage_train,label_train=load_data(path_data,mode)
+    X_test, Y_test,codage_test,label_test=load_data(path_data,mode,apprentissage=False)
 
-    #_,priors=np.unique(Y_train,return_counts=True)
-    #priors=priors/priors.sum()
+    _,priors=np.unique(Y_train,return_counts=True)
+    priors=priors/priors.sum()
     
     #nb
-    #param_nb = {'var_smoothing': [1e-9,1e-8,1e-7,1e-6]}
-    #grid_search = GridSearchCV(GaussianNB(priors=priors), param_nb, cv=skf,scoring='balanced_accuracy')
-    #learning(grid_search, X_train, Y_train,label_train,X_test,label_test,codage_train,codage_test,"nb","sc",mode,rep_save)
+    param_nb = {'var_smoothing': [1e-9,1e-8,1e-7,1e-6]}
+    grid_search = GridSearchCV(GaussianNB(priors=priors), param_nb, cv=skf,scoring='balanced_accuracy')
+    learning(grid_search, X_train, Y_train,label_train,X_test,label_test,codage_train,codage_test,"nb","sc",mode,rep_save)
 
     #knn
-    #param_grid = {'n_neighbors' : np.arange(5,15,1)}
-    #grid_knn = GridSearchCV(KNeighborsClassifier(n_jobs=-1), param_grid, cv=skf,scoring='balanced_accuracy')
-    #learning(grid_knn, X_train, Y_train,label_train,X_test,label_test,codage_train,codage_test,"knn","sc",mode,rep_save)
+    param_grid = {'n_neighbors' : np.arange(5,15,1)}
+    grid_knn = GridSearchCV(KNeighborsClassifier(n_jobs=-1), param_grid, cv=skf,scoring='balanced_accuracy')
+    learning(grid_knn, X_train, Y_train,label_train,X_test,label_test,codage_train,codage_test,"knn","sc",mode,rep_save)
 
     
     ##################################################################################################################################
@@ -314,9 +316,9 @@ def lanch(path_data,rep_save,mode):
     priors=priors/priors.sum()
 
     #knn
-    #param_grid = {'n_neighbors' : np.arange(5,15,1)}
-    #grid_knn = GridSearchCV(KNeighborsClassifier(n_jobs=-1), param_grid, cv=skf,scoring='balanced_accuracy')
-    #learning(grid_knn, X_train, Y_train,label_train,X_test,label_test,codage_train,codage_test,"knn","ac",mode,rep_save)
+    param_grid = {'n_neighbors' : np.arange(5,15,1)}
+    grid_knn = GridSearchCV(KNeighborsClassifier(n_jobs=-1), param_grid, cv=skf,scoring='balanced_accuracy')
+    learning(grid_knn, X_train, Y_train,label_train,X_test,label_test,codage_train,codage_test,"knn","ac",mode,rep_save)
 
     #nb
     param_nb = {'var_smoothing': [1e-9,1e-8,1e-7,1e-6]}
@@ -354,3 +356,27 @@ def affichage(typ):
 
     data={'representation':r,'modele':m,'chauvechement':list_chauv,'score_app':score_app,'score_test':score_test}
     return pd.DataFrame(data)
+
+
+def show_matrix(modele,chauvechement,representation,typ_data):
+    def aux(m,r,c,l):
+        for ele in l:
+            if m in ele and r  in ele  and c in ele :
+                return ele
+            
+    path = f"resultat/segmentation/{typ_data}"
+    onlyfiles = [f for f in listdir(path) if isfile(f'{path}/{f}') ]
+    f=aux(modele,representation,chauvechement,onlyfiles)
+
+    plt.figure(figsize=(11, 8))
+
+    with open (f'{path}/{f}','rb') as fd :
+        obj=pickle.load(fd)
+        mat_conf=obj['confusion_matrix']
+        sns.heatmap(mat_conf, annot=True, cmap="Blues", fmt="d", cbar=False)
+        # Configuration des labels des axes
+        plt.xlabel("Classe prédite")
+        plt.ylabel("Classe réelle")
+
+        # Affichage du graphique
+        plt.show()
